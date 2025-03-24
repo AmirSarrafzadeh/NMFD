@@ -1,0 +1,30 @@
+{
+  "input_data": {
+    "data_name": "fcdmm201909.csv",
+    "chunk_size": 10000000,
+    "zone_filename": "zone_data.csv",
+    "zone_column": "Zone ID"
+  },
+  "database": {
+    "dbname": "NMFD",
+    "schema": "data",
+    "table_name": "data_2019_09",
+    "user": "postgres",
+    "password": "admin",
+    "host": "localhost",
+    "port": 5432
+  },
+  "operation": {
+    "time_interval": "5min",
+    "dt_column": "datetime",
+    "vehicle_id_column": "vehicle_id",
+    "zone_id_column": "zone_id",
+    "fid_column": "fid",
+    "vehicle_class_column": "vehicle_class",
+    "vehicle_type": "A",
+    "velocity_column": "velocity"
+  },
+  "output_data": {
+    "output_filename": "vehicles"
+  }
+}

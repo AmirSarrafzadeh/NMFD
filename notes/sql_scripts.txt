@@ -1,0 +1,106 @@
+--Create the table in database
+CREATE TABLE data (
+    gid VARCHAR(20) PRIMARY KEY,
+    x DOUBLE PRECISION,
+    y DOUBLE PRECISION,
+    direction INTEGER NULL,
+    velocity BIGINT Null,
+    dt TIMESTAMP NULL,
+    status INTEGER NULL,
+    vehicle_id BIGINT NULL,
+    vehicle_class VARCHAR(2) NULL,
+    zone_id BIGINT NULL,
+    fid BIGINT NULL,
+    ts_insert TIMESTAMP NULL
+);
+
+CREATE TABLE data_2019_09_04 AS
+SELECT * FROM data 
+WHERE dt::DATE = '2019-09-04' 
+AND status = 1 
+AND vehicle_class = 'A';
+
+Speed Distribution
+WITH velocity_stats AS (
+    SELECT MIN(velocity) AS min_velocity, MAX(velocity) AS max_velocity FROM data
+)
+SELECT 
+    width_bucket(velocity, (SELECT min_velocity FROM velocity_stats), (SELECT max_velocity FROM velocity_stats), 10) AS bin,
+    COUNT(*) AS count,
+    MIN(velocity) AS bin_min,
+    MAX(velocity) AS bin_max
+FROM data
+WHERE velocity IS NOT NULL
+GROUP BY bin
+ORDER BY bin;
+
+
+SELECT vehicle_class, COUNT(*) AS count
+FROM data
+GROUP BY vehicle_class
+ORDER BY count DESC;
+
+
+
+-- Create an index on `dt` for fast date-based queries
+CREATE INDEX idx_data_dt ON data (dt);
+
+-- Create an index on `vehicle_id` for fast filtering by vehicle
+CREATE INDEX idx_data_vehicle_id ON data (vehicle_id);
+
+-- Create an index on `zone_id` for fast filtering by zone
+CREATE INDEX idx_data_zone_id ON data (zone_id);
+
+-- Create a composite index if queries often filter by all three
+CREATE INDEX idx_data_composite ON data (dt, vehicle_id, zone_id);
+
+--get the unique dates
+SELECT DISTINCT DATE(dt) AS unique_date
+FROM data.data
+ORDER BY unique_date;
+
+
+
+--get the vehicles and number of them in unique date and unique zone;
+SELECT 
+    DATE_TRUNC('minute', dt) - INTERVAL '1 minute' * (EXTRACT(MINUTE FROM dt) % 5) AS time_bin,
+    COUNT(DISTINCT vehicle_id) AS num_vehicles,
+    STRING_AGG(DISTINCT vehicle_id::TEXT, ', ') AS vehicle_ids
+FROM data."data_2019-09-01"
+WHERE DATE(dt) = '2019-09-01' 
+  AND zone_id = 1000701 
+  AND vehicle_class = 'A'
+GROUP BY time_bin
+ORDER BY time_bin ASC;
+
+
+select * from data.data
+where vehcile_id = '1933783155' and zone_id = '1000701.0' and DATE(dt) = '2019-09-01'
+
+
+SELECT DATE(dt) AS unique_date, COUNT(*) AS record_count
+FROM data.data
+GROUP BY unique_date
+ORDER BY unique_date;
+
+Enable PostGIS extension
+CREATE EXTENSION postgis;
+
+-- Create a sample table with geometry column
+CREATE TABLE vehicle_data (
+    id SERIAL PRIMARY KEY,
+    objectid INT,
+    gid BIGINT,
+    x DOUBLE PRECISION,
+    y DOUBLE PRECISION,
+    direction INT,
+    velocity INT,
+    dt BIGINT,
+    status INT,
+    vehicle_id BIGINT,
+    vehicle_class TEXT,
+    zone_id INT,
+    fid INT,
+    ts_insert BIGINT,
+    geom GEOMETRY(Point, 4326)
+);

@@ -54,9 +54,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
-# Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -106,14 +103,10 @@ WSGI_APPLICATION = 'map.wsgi.application'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'lvlal2alvl@gmail.com'
-EMAIL_HOST_PASSWORD = 'jppqnnzeitrpvbbr'
+EMAIL_HOST_USER = os.getenv('email')
+EMAIL_HOST_PASSWORD = os.getenv('password')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 # Log database configuration
 try:
@@ -136,9 +129,6 @@ except Exception as e:
     logging.critical("Error configuring database: %s", e)
     raise
 
-# Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -154,10 +144,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -166,21 +152,9 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = 'static/'
 
 # Add this line to define where collected static files will be stored
 STATIC_ROOT = os.path.join(BASE_DIR, 'mmm/static')
-
-# Optional: If you have a 'static' folder in your app, include this:
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, 'mmm/static'),
-# ]
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

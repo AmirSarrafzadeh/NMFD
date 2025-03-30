@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no"/>
+    <title>Vehicle Tracking Scene</title>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: row;
+        }
+
+        #sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            padding: 0 20px;
+            border-right: 2px solid #ccc;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #map-container {
+            flex: 1;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        arcgis-scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: lightgray;
+        }
+
+        select, button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        arcgis-basemap-gallery.hidden {
+            display: none !important;
+        }
+    </style>
+
+    <!-- Calcite components -->
+    <script type="module" src="https://js.arcgis.com/calcite-components/3.0.3/calcite.esm.js"></script>
+
+    <!-- ArcGIS Maps SDK -->
+    <link rel="stylesheet" href="https://js.arcgis.com/4.32/esri/themes/light/main.css"/>
+    <script src="https://js.arcgis.com/4.32/"></script>
+
+    <!-- ArcGIS Map Components -->
+    <script type="module" src="https://js.arcgis.com/map-components/4.32/arcgis-map-components.esm.js"></script>
+</head>
+
+<body>
+<div id="sidebar">
+<div style="width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 10px 0;">
+        <a href="http://127.0.0.1:8000/" title="Home" style="text-decoration: none; font-size: 24px;">🏠</a>
+        <a href="http://127.0.0.1:8000/map" title="Map View" style="text-decoration: none; font-size: 24px;">🗺️</a>
+    </div>
+    <h2>Vehicle & Trip Selection</h2>
+
+    <select id="vehicleSelect" onchange="updateTrips()">
+        <option value="">-- Select a Vehicle ID --</option>
+        {% for veh_id in veh_ids %}
+            <option value="{{ veh_id }}">{{ veh_id }}</option>
+        {% endfor %}
+    </select>
+
+    <select id="tripSelect">
+        <option value="">-- Select a Trip Number --</option>
+    </select>
+
+    <button onclick="fetchGeoJSON()">📊 Load Data</button>
+
+    <p><b>🚖 Mode:</b> <span id="modeInfo">-</span></p>
+    <p><b>📍 Number of Points:</b> <span id="numPointsInfo">-</span></p>
+
+    <hr>
+</div>
+
+<div id="map-container">
+    <arcgis-scene basemap="topo-3d" id="map"
+                  camera-position="12.4964, 41.9028, 1620"
+                  camera-tilt="57" camera-heading="57">
+        <arcgis-zoom position="top-left"></arcgis-zoom>
+        <arcgis-expand position="top-right">
+            <arcgis-basemap-gallery></arcgis-basemap-gallery>
+        </arcgis-expand>
+    </arcgis-scene>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        require(["esri/layers/GeoJSONLayer"], function (GeoJSONLayer) {
+            const scene = document.getElementById("map");
+
+            function updateTrips() {
+                let vehicleId = document.getElementById("vehicleSelect").value;
+                let tripSelect = document.getElementById("tripSelect");
+
+                if (!vehicleId) {
+                    tripSelect.innerHTML = '<option value="">-- Select a Trip ID --</option>';
+                    return;
+                }
+
+                fetch(`/trips/?uid=${vehicleId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                            return;
+                        }
+
+                        tripSelect.innerHTML = '<option value="">-- Select a Trip ID --</option>';
+                        data.trips.forEach(trip => {
+                            tripSelect.innerHTML += `<option value="${trip}">${trip}</option>`;
+                        });
+                    })
+                    .catch(error => console.error("❌ Error fetching trips:", error));
+            }
+
+            function fetchGeoJSON() {
+                let vehicleId = document.getElementById("vehicleSelect").value;
+                let tripId = document.getElementById("tripSelect").value;
+
+                if (!vehicleId) {
+                    alert("Please select a vehicle ID.");
+                    return;
+                }
+
+                let url = `/geojson/?vehicle_id=${vehicleId}`;
+                if (tripId) {
+                    url += `&trip=${tripId}`;
+                }
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                            return;
+                        }
+
+                        console.log("✅ GeoJSON data received:", data);
+                        document.getElementById("modeInfo").textContent = data.mode || "Class A";
+                        document.getElementById("numPointsInfo").textContent = data.features.length || "0";
+
+                        if (window.geojsonLayer) {
+                            scene.map.remove(window.geojsonLayer);
+                        }
+
+                        const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+                        const blobUrl = URL.createObjectURL(blob);
+
+                        const geojsonLayer = new GeoJSONLayer({
+                            url: blobUrl,
+                            renderer: {
+                                type: "simple",
+                                symbol: {
+                                    type: "point-3d",
+                                    symbolLayers: [{
+                                        type: "object",
+                                        resource: {primitive: "sphere"},
+                                        material: {color: "red"},
+                                        width: 7,
+                                        height: 7,
+                                        depth: 7
+                                    }]
+                                }
+                            },
+                            popupTemplate: {
+                                title: "Vehicle ID: {vehicle_id}",
+                                content: `
+                                    <b>GID:</b> {gid} <br>
+                                    <b>Velocity:</b> {velocity} <br>
+                                    <b>Direction:</b> {direction} <br>
+                                    <b>Status:</b> {status} <br>
+                                    <b>Vehicle Class:</b> {vehicle_class} <br>
+                                    <b>Zone ID:</b> {zone_id} <br>
+                                    <b>FID:</b> {fid} <br>
+                                    <b>Timestamp:</b> {dt}
+                                `
+                            }
+                        });
+
+                        window.geojsonLayer = geojsonLayer;
+                        scene.map.add(geojsonLayer);
+
+                        geojsonLayer.when(() => {
+                            const sceneView = scene.view;
+                            if (geojsonLayer.fullExtent) {
+                                sceneView.goTo(geojsonLayer.fullExtent.expand(1.5)).catch(err => {
+                                    console.error("❌ Error zooming to GeoJSON layer:", err);
+                                });
+                            } else {
+                                console.warn("⚠️ No extent available to zoom.");
+                            }
+                        });
+                    })
+                    .catch(error => console.error("❌ Error loading GeoJSON:", error));
+            }
+
+            window.updateTrips = updateTrips;
+            window.fetchGeoJSON = fetchGeoJSON;
+        });
+    });
+</script>
+</body>
+</html>

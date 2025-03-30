@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    {% load static %}
+    <link rel="stylesheet" href={% static 'landing_page/index.css' %}>
+    <title>MMM</title>
+</head>
+
+<body>
+<video class="bg-video" playsinline="playsinline" autoplay="autoplay" muted="muted" loop="loop">
+    <source src="{% static 'mp4/bg.mp4' %}" type="video/mp4"/>
+</video>
+
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-transparent position-fixed w-100" style="z-index: 1000;">
+    <div class="container-fluid">
+        <!-- Brand Name -->
+        <a class="navbar-brand" href="https://www.linkedin.com/in/amir-sarrafzadeh/" target="_blank">About</a>
+
+        <!-- Navigation Links and Login Button -->
+        <div class="justify-content-end" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="btn btn-outline-light" href="/login" role="button">Login</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="masthead">
+    <div class="masthead-content text-white">
+        <div class="container-fluid px-4 px-lg-0">
+            <h2 class="fst-italic mb-4">Welcome To My Website</h2>
+            <p class="mb-5">AMIR SARRAFZADEH</p>
+        </div>
+    </div>
+</div>
+
+<div class="social-icons">
+
+</div>
+
+<!-- JavaScript for Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-OERcA2JDzLvUQo3UZl+8VCKzJ7xER2aJEvBJ0lHZK/1rwBNsV7Ef2rqUnMn3KmYx" crossorigin="anonymous"></script>
+</body>
+
+</html>

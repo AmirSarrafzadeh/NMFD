@@ -1,0 +1,275 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Tracking Map</title>
+
+    <!-- ✅ Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
+          crossorigin="anonymous"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous"></script>
+
+    <style>
+        /* Layout & Styling */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: row;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-bottom: 0px;
+            padding-top: 0px;
+            border-right: 2px solid #ccc;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Map Container */
+        #map-container {
+            flex: 1;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: lightgray;
+        }
+
+        /* Dropdown Styling */
+        select, button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+
+    <div style="width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 10px 0;">
+        <a href="http://127.0.0.1:8000/" title="Home" style="text-decoration: none; font-size: 24px;">🏠</a>
+        <a href="http://127.0.0.1:8000/scene" title="Scene View" style="text-decoration: none; font-size: 24px;">🌐</a>
+    </div>
+    <h2>Vehicle & Trip Selection</h2>
+
+    <!-- Vehicle Selection -->
+    <select id="vehicleSelect" onchange="updateTrips()">
+        <option value="">-- Select a Vehicle ID --</option>
+        {% for veh_id in veh_ids %}
+            <option value="{{ veh_id }}">{{ veh_id }}</option>
+        {% endfor %}
+    </select>
+
+    <select id="tripSelect">
+        <option value="">-- Select a Trip Number --</option>
+    </select>
+
+    <!-- Load Data Button -->
+    <button onclick="fetchGeoJSON()">
+        📊 Load Data
+    </button>
+
+    <hr>
+
+    <!-- Basemap Selection -->
+    <h3>🗺️ Basemap Selection</h3>
+    <select id="basemapSelect" onchange="changeBasemap()">
+        <option value="osm">🌍 OpenStreetMap</option>
+        <option value="google_satellite">🛰️ Google Satellite</option>
+    </select>
+
+    <hr>
+
+    <p><b>🚖 Mode:</b> <span id="modeInfo">-</span></p>
+    <p><b>📍 Number of Points:</b> <span id="numPointsInfo">-</span></p>
+
+    <hr>
+</div>
+
+<!-- ✅ Map Container -->
+<div id="map-container">
+    <div id="map"></div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        console.log("🚀 Initializing Leaflet map...");
+
+        var map = L.map("map", {
+            zoomControl: true,
+            maxZoom: 21, // ✅ Prevents tiles from disappearing
+        }).setView([41.9028, 12.4964], 13);
+
+        var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors",
+            maxZoom: 21,
+            maxNativeZoom: 19
+        });
+
+        var googleSatelliteLayer = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+            attribution: "&copy; Google Maps",
+            maxZoom: 21,
+            maxNativeZoom: 20
+        });
+
+        // ✅ Default to OpenStreetMap
+        osmLayer.addTo(map);
+
+        function changeBasemap() {
+            let selectedBasemap = document.getElementById("basemapSelect").value;
+
+            if (selectedBasemap === "google_satellite") {
+                map.removeLayer(osmLayer);
+                map.addLayer(googleSatelliteLayer);
+            } else {
+                map.removeLayer(googleSatelliteLayer);
+                map.addLayer(osmLayer);
+            }
+        }
+
+        // 🔄 Fetch available trip IDs when user selects a Vehicle ID
+        function updateTrips() {
+            let vehicleId = document.getElementById("vehicleSelect").value;
+            let tripSelect = document.getElementById("tripSelect");
+
+            if (!vehicleId) {
+                tripSelect.innerHTML = '<option value="">-- Select a Trip ID --</option>';
+                return;
+            }
+
+            fetch(`/trips/?uid=${vehicleId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    tripSelect.innerHTML = '<option value="">-- Select a Trip ID --</option>';
+                    data.trips.forEach(trip => {
+                        tripSelect.innerHTML += `<option value="${trip}">${trip}</option>`;
+                    });
+                })
+                .catch(error => console.error("❌ Error fetching trips:", error));
+        }
+
+
+        function fetchGeoJSON() {
+            let vehicleId = document.getElementById("vehicleSelect").value;
+            let tripId = document.getElementById("tripSelect").value;
+
+            if (!vehicleId) {
+                alert("Please select a vehicle ID.");
+                return;
+            }
+
+            let url = `/geojson/?vehicle_id=${vehicleId}`;
+
+            if (tripId) {
+                url += `&trip=${tripId}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    console.log("✅ GeoJSON data received:", data);
+
+                    // ✅ Update Mode and Number of Points in UI
+                    document.getElementById("modeInfo").textContent = data.mode || "Class A";
+                    document.getElementById("numPointsInfo").textContent = data.features.length || "0";
+
+                    // Remove old data layer before adding new data
+                    if (window.geojsonLayer) {
+                        map.removeLayer(window.geojsonLayer);
+                    }
+
+                    window.geojsonLayer = L.geoJSON(data, {
+                        pointToLayer: function (feature, latlng) {
+                            return L.circleMarker(latlng, {
+                                radius: 6,
+                                fillColor: "blue",
+                                color: "white",
+                                weight: 1,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            });
+                        },
+                        onEachFeature: function (feature, layer) {
+                            let props = feature.properties;
+
+                            let popupContent = `
+                                <b>GID:</b> ${props.gid} <br>
+                                <b>Vehicle ID:</b> ${props.vehicle_id} <br>
+                                <b>Velocity:</b> ${props.velocity} <br>
+                                <b>Direction:</b> ${props.direction} <br>
+                                <b>Status:</b> ${props.status} <br>
+                                <b>Vehicle Class:</b> ${props.vehicle_class} <br>
+                                <b>Zone ID:</b> ${props.zone_id} <br>
+                                <b>FID:</b> ${props.fid} <br>
+                                <b>Timestamp:</b> ${new Date(props.dt).toLocaleString()}
+                            `;
+                            layer.bindPopup(popupContent);
+                        }
+                    }).addTo(map);
+
+                    // Adjust map view to fit all points
+                    if (data.features.length > 0) {
+                        let geojsonBounds = L.geoJSON(data).getBounds();
+                        map.fitBounds(geojsonBounds, {padding: [50, 50], maxZoom: 19});
+                    } else {
+                        alert("No locations found for this user and trip.");
+                    }
+                })
+                .catch(error => console.error("❌ Error loading GeoJSON:", error));
+        }
+
+        // Expose functions globally
+        window.updateTrips = updateTrips;
+        window.fetchGeoJSON = fetchGeoJSON;
+        window.changeBasemap = changeBasemap;
+    });
+</script>
+
+</body>
+</html>

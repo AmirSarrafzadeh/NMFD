@@ -22,12 +22,12 @@ lib/
 lib64/
 parts/
 sdist/
+notes/
 var/
 wheels/
 share/python-wheels/
 arcgisPro/
 ArcGISPro/
-map/
 ArcGIS_Pro/
 *.egg-info/
 .installed.cfg
